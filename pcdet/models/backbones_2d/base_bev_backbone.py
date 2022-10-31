@@ -78,6 +78,8 @@ class BaseBEVBackbone(nn.Module):
 
         self.num_bev_features = c_in
 
+        
+        
     def forward(self, data_dict):
         """
         Args:
@@ -128,6 +130,10 @@ class BaseBEVBackboneV1(nn.Module):
         num_levels = len(layer_nums)
         self.blocks = nn.ModuleList()
         self.deblocks = nn.ModuleList()
+        
+        ########################################
+        
+        
         for idx in range(num_levels):
             cur_layers = [
                 nn.ZeroPad2d(1),
@@ -186,19 +192,24 @@ class BaseBEVBackboneV1(nn.Module):
                 spatial_features
         Returns:
         """
-        spatial_features = data_dict['multi_scale_2d_features']
+        spatial_features = data_dict['encoded_spconv_tensor'].dense()[:, :, 0, :, :]
+        conv3 = nn.Sequential(
+            nn.Conv2d(64, 256, 3,stride=2, padding=1).to(spatial_features.device),
+            nn.ReLU())
+            
+        x_conv3 = conv3(spatial_features)
+        
+        # x_conv4 = spatial_features['x_conv4']
+        # x_conv5 = spatial_features['x_conv5']
 
-        x_conv4 = spatial_features['x_conv4']
-        x_conv5 = spatial_features['x_conv5']
+        # ups = [self.deblocks[0](x_conv4)]
 
-        ups = [self.deblocks[0](x_conv4)]
+        # x = self.blocks[1](x_conv5)
+        # ups.append(self.deblocks[1](x))
 
-        x = self.blocks[1](x_conv5)
-        ups.append(self.deblocks[1](x))
+        # x = torch.cat(ups, dim=1)
+        # x = self.blocks[0](x)
 
-        x = torch.cat(ups, dim=1)
-        x = self.blocks[0](x)
-
-        data_dict['spatial_features_2d'] = x
+        data_dict['spatial_features_2d'] = x_conv3
 
         return data_dict
